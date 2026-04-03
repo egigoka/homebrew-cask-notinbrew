@@ -1,4 +1,4 @@
-name: Auto-bump casks
+name: Auto-bump casks and formulas
 
 on:
   schedule:
@@ -21,22 +21,32 @@ jobs:
           mkdir -p "$(brew --repository)/Library/Taps/egigoka"
           ln -sfn "$GITHUB_WORKSPACE" "$(brew --repository)/Library/Taps/egigoka/homebrew-cask-notinbrew"
 
-      - name: Check and bump casks
+      - name: Check and bump casks and formulas
         run: |
           set -e
 
           updated=false
 
-          for cask_file in Casks/*.rb; do
+          # Process both casks and formulas
+          for cask_file in Casks/*.rb Formula/*.rb; do
+            [ -f "$cask_file" ] || continue
             cask_name=$(basename "$cask_file" .rb)
-            echo "=== Checking $cask_name ==="
+            dir_name=$(dirname "$cask_file")
+            echo "=== Checking $cask_name ($dir_name) ==="
+
+            # Determine if this is a cask or formula
+            if [ "$dir_name" = "Casks" ]; then
+              livecheck_flag="--cask"
+            else
+              livecheck_flag="--formula"
+            fi
 
             # Get current version from file
             current_version=$(grep -m1 'version "' "$cask_file" | sed 's/.*version "//;s/".*//')
             echo "Current: $current_version"
 
             # Run livecheck
-            livecheck_output=$(brew livecheck --cask --json "$cask_name" 2>/dev/null || echo "[]")
+            livecheck_output=$(brew livecheck $livecheck_flag --json "$cask_name" 2>/dev/null || echo "[]")
             latest_version=$(echo "$livecheck_output" | ruby -rjson -e '
               data = JSON.parse(STDIN.read)
               if data.is_a?(Array) && !data.empty? && data[0]["version"] && data[0]["version"]["latest"]
@@ -183,5 +193,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "Auto-bump cask versions"
+          git commit -m "Auto-bump versions"
           git push
