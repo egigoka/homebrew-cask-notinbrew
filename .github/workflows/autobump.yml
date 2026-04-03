@@ -1,0 +1,187 @@
+name: Auto-bump casks
+
+on:
+  schedule:
+    - cron: "0 8 * * *"  # daily at 8am UTC
+  workflow_dispatch:  # manual trigger
+
+jobs:
+  bump:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+
+      - name: Tap self
+        run: |
+          mkdir -p "$(brew --repository)/Library/Taps/egigoka"
+          ln -sfn "$GITHUB_WORKSPACE" "$(brew --repository)/Library/Taps/egigoka/homebrew-cask-notinbrew"
+
+      - name: Check and bump casks
+        run: |
+          set -e
+
+          updated=false
+
+          for cask_file in Casks/*.rb; do
+            cask_name=$(basename "$cask_file" .rb)
+            echo "=== Checking $cask_name ==="
+
+            # Get current version from file
+            current_version=$(grep -m1 'version "' "$cask_file" | sed 's/.*version "//;s/".*//')
+            echo "Current: $current_version"
+
+            # Run livecheck
+            livecheck_output=$(brew livecheck --cask --json "$cask_name" 2>/dev/null || echo "[]")
+            latest_version=$(echo "$livecheck_output" | ruby -rjson -e '
+              data = JSON.parse(STDIN.read)
+              if data.is_a?(Array) && !data.empty? && data[0]["version"] && data[0]["version"]["latest"]
+                puts data[0]["version"]["latest"]
+              end
+            ' 2>/dev/null || echo "")
+
+            if [ -z "$latest_version" ]; then
+              echo "Could not determine latest version, skipping"
+              continue
+            fi
+
+            echo "Latest: $latest_version"
+
+            if [ "$current_version" = "$latest_version" ]; then
+              echo "Up to date"
+              continue
+            fi
+
+            echo "Updating $cask_name: $current_version -> $latest_version"
+
+            # Update version in cask file
+            sed -i '' "s/version \"$current_version\"/version \"$latest_version\"/" "$cask_file"
+
+            # Build new URL(s) and compute sha256
+            # Extract URL pattern from cask file
+            urls=$(grep -E '^\s+url "' "$cask_file" | sed 's/.*url "//;s/".*//')
+
+            # Check if sha256 is :no_check
+            if grep -q 'sha256 :no_check' "$cask_file"; then
+              echo "sha256 is :no_check, skipping hash update"
+            else
+              # Handle arch-specific sha256 (on_arm/on_intel blocks)
+              if grep -q 'on_arm' "$cask_file"; then
+                # Resolve URLs using Ruby to handle all interpolation patterns
+                read -r arm_url intel_url <<< "$(ruby -e '
+                  version = ARGV[0]
+                  csv = version.split(",")
+                  lines = File.readlines(ARGV[1])
+                  in_arm = false; in_intel = false
+                  arm_url = ""; intel_url = ""
+                  lines.each do |line|
+                    in_arm = true if line =~ /on_arm do/
+                    in_intel = true if line =~ /on_intel do/
+                    if line =~ /url "([^"]+)"/
+                      raw = $1
+                      resolved = raw
+                        .gsub("#{version}", version)
+                        .gsub("#{version.csv.first}", csv[0].to_s)
+                        .gsub("#{version.csv.second}", csv[1].to_s)
+                        .gsub("#{version.csv.third}", csv[2].to_s)
+                      if in_arm && arm_url.empty?
+                        arm_url = resolved
+                      elsif in_intel && intel_url.empty?
+                        intel_url = resolved
+                      end
+                    end
+                    in_arm = false if in_arm && line =~ /^\s+end/
+                    in_intel = false if in_intel && line =~ /^\s+end/
+                  end
+                  puts "#{arm_url} #{intel_url}"
+                ' "$latest_version" "$cask_file")"
+
+                echo "Downloading ARM: $arm_url"
+                arm_sha=$(curl -fsSL "$arm_url" | shasum -a 256 | awk '{print $1}')
+                if [ -n "$arm_sha" ] && [ "$arm_sha" != "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" ]; then
+                  ruby -i -e '
+                    lines = File.readlines(ARGV[0])
+                    in_arm = false
+                    lines.each_with_index do |line, i|
+                      if line =~ /on_arm do/
+                        in_arm = true
+                      elsif in_arm && line =~ /sha256 "/
+                        lines[i] = line.sub(/"[a-f0-9]+"/, "\"'"$arm_sha"'\"")
+                        in_arm = false
+                      end
+                    end
+                    File.write(ARGV[0], lines.join)
+                  ' "$cask_file"
+                fi
+
+                echo "Downloading Intel: $intel_url"
+                intel_sha=$(curl -fsSL "$intel_url" | shasum -a 256 | awk '{print $1}')
+                if [ -n "$intel_sha" ] && [ "$intel_sha" != "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" ]; then
+                  ruby -i -e '
+                    lines = File.readlines(ARGV[0])
+                    in_intel = false
+                    lines.each_with_index do |line, i|
+                      if line =~ /on_intel do/
+                        in_intel = true
+                      elsif in_intel && line =~ /sha256 "/
+                        lines[i] = line.sub(/"[a-f0-9]+"/, "\"'"$intel_sha"'\"")
+                        in_intel = false
+                      end
+                    end
+                    File.write(ARGV[0], lines.join)
+                  ' "$cask_file"
+                fi
+              else
+                # Single URL - resolve Ruby interpolation
+                csv_parts=(${latest_version//,/ })
+                resolved_url=$(echo "$urls" | head -1 | \
+                  sed "s/#{version.csv.first}/${csv_parts[0]:-}/g" | \
+                  sed "s/#{version.csv.second}/${csv_parts[1]:-}/g" | \
+                  sed "s/#{version}/$latest_version/g" | \
+                  sed "s/#{sha256}//g")
+
+                echo "Downloading: $resolved_url"
+                tmpfile=$(mktemp)
+                if curl -fsSL -o "$tmpfile" "$resolved_url" 2>/dev/null; then
+                  new_sha=$(shasum -a 256 "$tmpfile" | awk '{print $1}')
+                  rm -f "$tmpfile"
+
+                  if [ -n "$new_sha" ]; then
+                    # Get old sha256
+                    old_sha=$(grep -m1 'sha256 "' "$cask_file" | sed 's/.*sha256 "//;s/".*//')
+                    sed -i '' "s/sha256 \"$old_sha\"/sha256 \"$new_sha\"/" "$cask_file"
+
+                    # For checkra1n: URL contains the sha256 hash
+                    if echo "$urls" | grep -q '#{sha256}'; then
+                      echo "URL contains sha256 reference, updating URL hash too"
+                    fi
+                  fi
+                else
+                  echo "Download failed, reverting version"
+                  sed -i '' "s/version \"$latest_version\"/version \"$current_version\"/" "$cask_file"
+                  rm -f "$tmpfile"
+                  continue
+                fi
+              fi
+            fi
+
+            updated=true
+            echo "Updated $cask_name to $latest_version"
+          done
+
+          if [ "$updated" = true ]; then
+            echo "UPDATED=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: Commit and push
+        if: env.UPDATED == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Auto-bump cask versions"
+          git push
