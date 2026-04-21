@@ -94,10 +94,10 @@ jobs:
                     if line =~ /url "([^"]+)"/
                       raw = $1
                       resolved = raw
-                        .gsub('#{version}', version)
-                        .gsub('#{version.csv.first}', csv[0].to_s)
-                        .gsub('#{version.csv.second}', csv[1].to_s)
-                        .gsub('#{version.csv.third}', csv[2].to_s)
+                        .gsub("\#{version}", version)
+                        .gsub("\#{version.csv.first}", csv[0].to_s)
+                        .gsub("\#{version.csv.second}", csv[1].to_s)
+                        .gsub("\#{version.csv.third}", csv[2].to_s)
                       if in_arm && arm_url.empty?
                         arm_url = resolved
                       elsif in_intel && intel_url.empty?
@@ -194,4 +194,4 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -m "Auto-bump versions"
-          git push
+          git push origin HEAD:main
