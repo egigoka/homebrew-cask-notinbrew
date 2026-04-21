@@ -1,7 +1,7 @@
 class Forgecode < Formula
   desc "AI enabled pair programmer for Claude, GPT, Grok, Deepseek, Gemini and 300+ models"
   homepage "https://forgecode.dev"
-  version "2.5.2"
+  version "2.12.0"
   license "Apache-2.0"
 
   livecheck do
@@ -11,12 +11,12 @@ class Forgecode < Formula
 
   on_arm do
     url "https://github.com/antinomyhq/forgecode/releases/download/v#{version}/forge-aarch64-apple-darwin"
-    sha256 "b47f71d5da4736eb1c7bfb17ae72324c50fffc54a9269bb9a3a89528818b9822"
+    sha256 "d8d2f493f3259272c09bc5ca90ef93f1388485220da7e68634277dd5f22fba3c"
   end
 
   on_intel do
     url "https://github.com/antinomyhq/forgecode/releases/download/v#{version}/forge-x86_64-apple-darwin"
-    sha256 "569cdf40b8a8c58acd762068c77214397f0e346ac1f30e97e843f2d5ffab9232"
+    sha256 "0c6d43558121f9b663f256a75def3ebb998f87446ba7c15868fedc52fd6b716e"
   end
 
   def install
