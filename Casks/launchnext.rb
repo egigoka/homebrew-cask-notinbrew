@@ -1,6 +1,6 @@
 cask "launchnext" do
-  version "2.4.0"
-  sha256 "78acac66abf65d13c5e7269bbcf0f7ef39b9145b67a561b2df6ea705e9eec6b3"
+  version "2.4.1"
+  sha256 "54dac8fac1fb39ec539df69bee44282ed7f77866677163c152137624f69a191c"
 
   url "https://github.com/RoversX/LaunchNext/releases/download/#{version}/LaunchNext#{version}.zip"
   name "LaunchNext"
