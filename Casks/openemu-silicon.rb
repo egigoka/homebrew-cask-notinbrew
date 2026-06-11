@@ -12,5 +12,7 @@ cask "openemu-silicon" do
     strategy :github_latest
   end
 
+  depends_on :macos
+
   app "OpenEmu.app"
 end
