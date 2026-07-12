@@ -27,6 +27,26 @@ jobs:
 
           updated=false
 
+          update_version() {
+            VERSION_SOURCE="$4" OLD_VERSION="$2" NEW_VERSION="$3" ruby -e '
+              path = ARGV.fetch(0)
+              source = ENV.fetch("VERSION_SOURCE")
+              old_version = ENV.fetch("OLD_VERSION")
+              new_version = ENV.fetch("NEW_VERSION")
+              changed = false
+              lines = File.readlines(path).map do |line|
+                matches = source == "explicit" ? line.match?(/^\s*version "/) : line.match?(/^\s*url "/)
+                next line unless matches && line.include?(old_version)
+
+                changed = true
+                line.sub(old_version, new_version)
+              end
+              abort "Could not update #{source} version in #{path}" unless changed
+
+              File.write(path, lines.join)
+            ' "$1"
+          }
+
           # Process both casks and formulas
           for cask_file in Casks/*.rb Formula/*.rb; do
             [ -f "$cask_file" ] || continue
@@ -41,9 +61,9 @@ jobs:
               livecheck_flag="--formula"
             fi
 
-            # Get current version from file
-            current_version=$(grep -m1 'version "' "$cask_file" | sed 's/.*version "//;s/".*//')
-            echo "Current: $current_version"
+            # Prefer an explicit version, but formulas can derive it from their URL
+            current_version=$(grep -m1 'version "' "$cask_file" | sed 's/.*version "//;s/".*//' || true)
+            version_source="explicit"
 
             # Run livecheck
             livecheck_output=$(brew livecheck $livecheck_flag --json "$cask_name" 2>/dev/null || echo "[]")
@@ -54,11 +74,22 @@ jobs:
               end
             ' 2>/dev/null || echo "")
 
-            if [ -z "$latest_version" ]; then
-              echo "Could not determine latest version, skipping"
+            if [ -z "$current_version" ]; then
+              version_source="url"
+              current_version=$(echo "$livecheck_output" | ruby -rjson -e '
+                data = JSON.parse(STDIN.read)
+                if data.is_a?(Array) && !data.empty? && data[0]["version"] && data[0]["version"]["current"]
+                  puts data[0]["version"]["current"]
+                end
+              ' 2>/dev/null || echo "")
+            fi
+
+            if [ -z "$current_version" ] || [ -z "$latest_version" ]; then
+              echo "Could not determine current or latest version, skipping"
               continue
             fi
 
+            echo "Current: $current_version"
             echo "Latest: $latest_version"
 
             if [ "$current_version" = "$latest_version" ]; then
@@ -68,8 +99,7 @@ jobs:
 
             echo "Updating $cask_name: $current_version -> $latest_version"
 
-            # Update version in cask file
-            sed -i '' "s/version \"$current_version\"/version \"$latest_version\"/" "$cask_file"
+            update_version "$cask_file" "$current_version" "$latest_version" "$version_source"
 
             # Build new URL(s) and compute sha256
             # Extract URL pattern from cask file
@@ -82,6 +112,7 @@ jobs:
               # Handle arch-specific sha256 (on_arm/on_intel blocks)
               if grep -q 'on_arm' "$cask_file"; then
                 # Resolve URLs using Ruby to handle all interpolation patterns
+                # shellcheck disable=SC2016
                 read -r arm_url intel_url <<< "$(ruby -e '
                   version = ARGV[0]
                   csv = version.split(",")
@@ -147,7 +178,7 @@ jobs:
                 fi
               else
                 # Single URL - resolve Ruby interpolation
-                csv_parts=(${latest_version//,/ })
+                IFS=',' read -r -a csv_parts <<< "$latest_version"
                 resolved_url=$(echo "$urls" | head -1 | \
                   sed "s/#{version.csv.first}/${csv_parts[0]:-}/g" | \
                   sed "s/#{version.csv.second}/${csv_parts[1]:-}/g" | \
@@ -172,7 +203,7 @@ jobs:
                   fi
                 else
                   echo "Download failed, reverting version"
-                  sed -i '' "s/version \"$latest_version\"/version \"$current_version\"/" "$cask_file"
+                  update_version "$cask_file" "$latest_version" "$current_version" "$version_source"
                   rm -f "$tmpfile"
                   continue
                 fi
