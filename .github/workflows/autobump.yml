@@ -99,6 +99,102 @@ jobs:
 
             echo "Updating $cask_name: $current_version -> $latest_version"
 
+            # UniFi OS Server download URLs contain release-specific UUIDs.
+            if [ "$cask_name" = "unifi-os-server" ]; then
+              # shellcheck disable=SC2016
+              if ! release_json=$(curl -fsSL --request POST \
+                --header "Content-Type: application/json" \
+                --data '{"query":"query Releases($groupId: ID!, $limit: Int!) { releases(groupId: $groupId, limit: $limit) { items { version stage status links { url } } } }","variables":{"groupId":"76650b06-fc47-4892-9c12-25c64c39f842","limit":20}}' \
+                "https://community.svc.ui.com/"); then
+                echo "Could not fetch UniFi OS Server release metadata, skipping"
+                continue
+              fi
+
+              if ! release_urls=$(LATEST_VERSION="$latest_version" ruby -rjson -e '
+                data = JSON.parse(STDIN.read)
+                release = data.dig("data", "releases", "items")&.find do |item|
+                  item["version"] == ENV.fetch("LATEST_VERSION") &&
+                    item["stage"] == "GA" && item["status"] == "PUBLISHED"
+                end
+                abort "Release metadata not found" unless release
+
+                links = release.fetch("links")
+                urls = links.map { |link| link["url"] }.compact
+                arm_url = urls.find { |url| url.include?("-macOS-dmg-arm64-") }
+                intel_url = urls.find { |url| url.include?("-macOS-dmg-amd64-") }
+                abort "macOS download URLs not found" unless arm_url && intel_url
+
+                puts [arm_url, intel_url].join("\t")
+              ' <<< "$release_json"); then
+                echo "Could not parse UniFi OS Server release metadata, skipping"
+                continue
+              fi
+              IFS=$'\t' read -r arm_url intel_url <<< "$release_urls"
+
+              tmpfile=$(mktemp)
+              echo "Downloading ARM: $arm_url"
+              if ! curl -fsSL --output "$tmpfile" "$arm_url"; then
+                echo "ARM download failed, skipping"
+                rm -f "$tmpfile"
+                continue
+              fi
+              arm_sha=$(shasum -a 256 "$tmpfile" | awk '{print $1}')
+
+              echo "Downloading Intel: $intel_url"
+              if ! curl -fsSL --output "$tmpfile" "$intel_url"; then
+                echo "Intel download failed, skipping"
+                rm -f "$tmpfile"
+                continue
+              fi
+              intel_sha=$(shasum -a 256 "$tmpfile" | awk '{print $1}')
+              rm -f "$tmpfile"
+
+              NEW_VERSION="$latest_version" ARM_URL="$arm_url" INTEL_URL="$intel_url" \
+                ARM_SHA="$arm_sha" INTEL_SHA="$intel_sha" ruby -e '
+                path = ARGV.fetch(0)
+                replacements = {
+                  version: false,
+                  arm_url: false,
+                  arm_sha: false,
+                  intel_url: false,
+                  intel_sha: false,
+                }
+                architecture = nil
+                lines = File.readlines(path).map do |line|
+                  if line.match?(/^\s*version "/)
+                    replacements[:version] = true
+                    line.sub(/version "[^"]+"/, %(version "#{ENV.fetch("NEW_VERSION")}"))
+                  elsif line.match?(/on_arm do/)
+                    architecture = :arm
+                    line
+                  elsif line.match?(/on_intel do/)
+                    architecture = :intel
+                    line
+                  elsif architecture && line.match?(/^\s+end/)
+                    architecture = nil
+                    line
+                  elsif architecture && line.match?(/^\s+url "/)
+                    replacements[:"#{architecture}_url"] = true
+                    url = ENV.fetch("#{architecture.upcase}_URL").sub(ENV.fetch("NEW_VERSION"), "\#{version}")
+                    line.sub(/url "[^"]+"/, %(url "#{url}"))
+                  elsif architecture && line.match?(/^\s+sha256 "/)
+                    replacements[:"#{architecture}_sha"] = true
+                    line.sub(/sha256 "[a-f0-9]+"/, %(sha256 "#{ENV.fetch("#{architecture.upcase}_SHA")}"))
+                  else
+                    line
+                  end
+                end
+                missing = replacements.reject { |_key, replaced| replaced }.keys
+                abort "Missing replacements: #{missing.join(", ")}" unless missing.empty?
+
+                File.write(path, lines.join)
+              ' "$cask_file"
+
+              updated=true
+              echo "Updated $cask_name to $latest_version"
+              continue
+            fi
+
             update_version "$cask_file" "$current_version" "$latest_version" "$version_source"
 
             # Build new URL(s) and compute sha256
