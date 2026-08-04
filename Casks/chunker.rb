@@ -1,13 +1,13 @@
 cask "chunker" do
-  version "1.18.1"
+  version "1.19.1"
 
   on_arm do
-    sha256 "db80cb0ede8aeb7432e27e5ccc499b13ac9d2fa95bf2735c9927777b3c189bf2"
+    sha256 "8cab9c3282286d5b27f3abf13e8ee18c291f1f72a643c65551e1c968f9db2073"
 
     url "https://github.com/HiveGamesOSS/Chunker/releases/download/#{version}/Chunker-#{version}-arm64-mac.dmg"
   end
   on_intel do
-    sha256 "7cc3769582ebd6c0eea244ee2cc560e816732b0b58421dfb3c8730a6cf517e10"
+    sha256 "2537db38b830758a49976aba91cdbfd1ddb1a35d0525acbd15ce1a28c5437f78"
 
     url "https://github.com/HiveGamesOSS/Chunker/releases/download/#{version}/Chunker-#{version}-amd64-mac.dmg"
   end
