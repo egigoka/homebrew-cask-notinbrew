@@ -19,15 +19,6 @@ class CamofoxBrowser < Formula
       system formula_opt_bin("node@24")/"npm", "rebuild", "better-sqlite3"
     end
 
-    pkgman = libexec/"node_modules/camoufox-js/dist/pkgman.js"
-    inreplace pkgman,
-              'export const INSTALL_DIR = userCacheDir("camoufox");',
-              <<~JS.chomp
-                export const INSTALL_DIR = process.env.CAMOUFOX_INSTALL_DIR
-                    ? path.resolve(process.env.CAMOUFOX_INSTALL_DIR)
-                    : userCacheDir("camoufox");
-              JS
-
     (bin/"camofox-browser").write_env_script formula_opt_bin("node@24")/"node",
                                                libexec/"bin/camofox-browser.js",
                                                CAMOFOX_CRASH_REPORT_ENABLED: "false",
