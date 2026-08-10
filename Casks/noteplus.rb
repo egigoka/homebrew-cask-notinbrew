@@ -1,6 +1,6 @@
 cask "noteplus" do
-  version "26.6.3"
-  sha256 "3f9f8277ea442046ee5883af864ba97929b6269c630800ab8d5b1e66ca24853a"
+  version "26.8.0"
+  sha256 "f3d6835e46e5549feef923ef0ad49c86140aa0e09c67036cd96ce796850e4794"
 
   url "https://files.noteplus.com/macos/#{version}/NotePlus.dmg"
   name "NotePlus"
