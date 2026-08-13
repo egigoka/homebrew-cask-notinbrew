@@ -1,6 +1,6 @@
 cask "pomodorough" do
-  version "1.0,aaf41da82cc7b74b5bb363a42d9e058bc2376ddc"
-  sha256 "ab2c7f2abbf33809ab2d92b0d8d87a5b9ba2dd37573de186a3170a77b38b5ad9"
+  version "1.0,e938939bcf34b32d37166c757e71bb7d8083fb89"
+  sha256 "02604bd29b39fe48c294c90b014bcf5958be8374a9d84af600b95ab7b883f312"
 
   url "https://github.com/egigoka/pomodorough-ios/archive/#{version.csv.second}.tar.gz?version=#{version.csv.first}"
   name "Pomodorough"
