@@ -1,16 +1,16 @@
 cask "unifi-os-server" do
-  version "5.1.21"
+  version "5.1.37"
 
   on_arm do
-    sha256 "dda570bbb338474fc41d56f3a272b5b8e55ec83b715c65dad04d28f8aec2de81"
+    sha256 "2468dc0a6a495e4452f4d4d78991697057dedd1a58d601778ca4e8b2816245c7"
 
-    url "https://fw-download.ubnt.com/data/unifi-os-server/0d75-macOS-dmg-arm64-#{version}-0c8076c5-1cc5-4fe8-9b41-ad6eb37bc4fe.dmg",
+    url "https://fw-download.ubnt.com/data/unifi-os-server/66aa-macOS-dmg-arm64-#{version}-03c2a143-d2d9-4a6a-a61f-564a22bcd454.dmg",
         verified: "fw-download.ubnt.com/data/unifi-os-server/"
   end
   on_intel do
-    sha256 "14f7def765547da9c050306bdaf2505497577c4dafc685b4a214b1cb308f17c8"
+    sha256 "4fce45eae7988a6a3d67848d1faaf629909abffdaea816fb69787fb768db70bd"
 
-    url "https://fw-download.ubnt.com/data/unifi-os-server/c726-macOS-dmg-amd64-#{version}-ee6cec2c-3e98-445f-8b30-67e8f9c8d12a.dmg",
+    url "https://fw-download.ubnt.com/data/unifi-os-server/6b67-macOS-dmg-amd64-#{version}-4000e09f-84e3-4dfd-b7e7-547e2b1726f5.dmg",
         verified: "fw-download.ubnt.com/data/unifi-os-server/"
   end
 
