@@ -1,6 +1,6 @@
 cask "pomodorough-desktop" do
-  version "0.4.5"
-  sha256 "d3f60c69abf414a555d53336cc8afd87cd1fd8d5ef38f7ed3c9ab5571469ccb4"
+  version "0.5.0"
+  sha256 "6d71cb7c85bc8f5e556e824893795c4018d1c3a5c49aa54ac5514b043cfd0f04"
 
   url "https://github.com/Pomodoro-Everywhere/pomodorough-desktop/releases/download/v#{version}/pomodorough_linux-#{version}.tar.gz"
   name "Pomodorough Desktop"
