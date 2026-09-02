@@ -1,6 +1,6 @@
 cask "pomodorough" do
-  version "1.0,50e5d1f3b1bc28d29cd45a0744a39ac7917ac47e"
-  sha256 "0a95d59e66520e0d3ba68fcbb9f575b6f67bf296370a014f95af448259e36d06"
+  version "1.0,5e22a684c4d49446e7cf277f19f5d8813cc48f0d"
+  sha256 "f562762b685c50a1c74362a75690baa95be67ad8dd6ed582d6cb61650ec70c56"
 
   url "https://github.com/Pomodoro-Everywhere/pomodorough-apple/archive/#{version.csv.second}.tar.gz?version=#{version.csv.first}"
   name "Pomodorough"
