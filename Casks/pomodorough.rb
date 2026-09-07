@@ -19,29 +19,21 @@ cask "pomodorough" do
 
   app "Pomodorough.app"
 
-  preflight do
-    system_command "/usr/bin/xcodebuild",
-                   args:         [
-                     "-project", "#{staged_path}/pomodorough-apple-#{version.csv.second}/Pomodorough.xcodeproj",
-                     "-scheme", "Pomodorough-macOS",
-                     "-configuration", "Release",
-                     "-derivedDataPath", "#{staged_path}/build",
-                     "ARCHS=arm64",
-                     "CODE_SIGN_IDENTITY=-",
-                     "CODE_SIGNING_REQUIRED=NO",
-                     "build"
-                   ],
-                   print_stderr: true
-
-    system_command "/bin/mv",
-                   args: ["#{staged_path}/build/Build/Products/Release/Pomodorough.app", staged_path]
-
-    system_command "/bin/rm",
-                   args: [
-                     "-rf",
-                     "#{staged_path}/pomodorough-apple-#{version.csv.second}",
-                     "#{staged_path}/build",
-                   ]
+  preflight_steps do
+    move "pomodorough-apple-*", "src", source_glob: true
+    run "/usr/bin/xcodebuild",
+        args: [
+          "-project", "{{staged_path}}/src/Pomodorough.xcodeproj",
+          "-scheme", "Pomodorough-macOS",
+          "-configuration", "Release",
+          "-derivedDataPath", "{{staged_path}}/build",
+          "ARCHS=arm64",
+          "CODE_SIGN_IDENTITY=-",
+          "CODE_SIGNING_REQUIRED=NO",
+          "build"
+        ]
+    move "build/Build/Products/Release/Pomodorough.app", "Pomodorough.app"
+    remove ["src", "build"], recursive: true
   end
 
   caveats <<~EOS
