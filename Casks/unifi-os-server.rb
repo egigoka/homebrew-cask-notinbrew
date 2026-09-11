@@ -1,15 +1,15 @@
 cask "unifi-os-server" do
-  version "5.1.40"
+  version "5.1.42"
 
   on_arm do
-    sha256 "1b06f35e058fd500f70aa5758ff948ab4c01d5da9a64b30cc861f64fa8d701f8"
+    sha256 "9447258ffb1b254b565c99c17ef5aff41297b23f15536a04e308222308864936"
 
-    url "https://fw-download.ubnt.com/data/unifi-os-server/75a6-macOS-dmg-arm64-#{version}-fbca99f6-6ceb-4c69-8700-261715dcb6c5.dmg"
+    url "https://fw-download.ubnt.com/data/unifi-os-server/fd85-macOS-dmg-arm64-#{version}-b062ce8f-543e-4b20-8c05-d607e2f188a0.dmg"
   end
   on_intel do
-    sha256 "b96967578919462962abe937543a93d9f7e00764d9a407710f4944da6aa2d485"
+    sha256 "7cd9f14ed4910174f534bb16031a0d4db95f8ccb9d4968cfe901b2ca06023f6e"
 
-    url "https://fw-download.ubnt.com/data/unifi-os-server/7b5e-macOS-dmg-amd64-#{version}-9e2241cf-355f-4cad-b8ff-ac01aa149c5a.dmg"
+    url "https://fw-download.ubnt.com/data/unifi-os-server/ae0e-macOS-dmg-amd64-#{version}-3d3a0922-8150-450a-af82-54e70bc3b6e0.dmg"
   end
 
   name "UniFi OS Server"
