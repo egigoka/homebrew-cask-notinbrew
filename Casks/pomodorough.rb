@@ -22,6 +22,11 @@ cask "pomodorough" do
   preflight_steps do
     move "pomodorough-apple-*", "src", source_glob: true
     run "/usr/bin/xcodebuild",
+        network_access: true,
+        writable_paths: [
+          "~/Library/Caches/org.swift.swiftpm",
+          "~/Library/Developer",
+        ],
         args: [
           "-project", "{{staged_path}}/src/Pomodorough.xcodeproj",
           "-scheme", "Pomodorough-macOS",
