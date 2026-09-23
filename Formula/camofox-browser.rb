@@ -1,8 +1,8 @@
 class CamofoxBrowser < Formula
   desc "Headless anti-detection browser automation server for AI agents"
   homepage "https://github.com/jo-inc/camofox-browser"
-  url "https://github.com/jo-inc/camofox-browser/archive/refs/tags/v1.16.0.tar.gz"
-  sha256 "26927920360c1d782c47a9cf330fea1818c2c463b64e6933ee2a00387f1c5583"
+  url "https://github.com/jo-inc/camofox-browser/archive/refs/tags/v1.17.0.tar.gz"
+  sha256 "1902280a01c5fee1c5fd9f231c16d4b5391163b090af8308db2cade7e60217cc"
   license "MIT"
 
   livecheck do
