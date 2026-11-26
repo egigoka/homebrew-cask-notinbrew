@@ -1,6 +1,6 @@
 cask "bitrig" do
-  version "0.34.0"
-  sha256 "da079741754d8658c5063496de66b0b109c8678685c8593728eaa82e4c5d8555"
+  version "0.35.0"
+  sha256 "d7beba4063f38a481c53048e0731e66e28f10612507a4534fc138b92c1af0495"
 
   url "https://downloads.bitrig.com/bitrig-#{version}.zip"
   name "Bitrig"
